@@ -996,7 +996,7 @@ async function loadNtms() {
         id: `event-${item.name.replace(/\s+/g, '-')}`,
 
         lat: Number(item.lat),
-        lng: Number(item.long),
+        lng: Number(item.lng),
 
         name: item.name,
 
@@ -1006,6 +1006,11 @@ async function loadNtms() {
         type: "Race / Event",
 
         shore: "Firth of Forth",
+
+        chips: [
+          ...(Array.isArray(item.chips) ? item.chips : []),
+        ].filter(Boolean),
+
 
         facts: item.facts
           ? item.facts.split("\n").map(line => {
@@ -1055,7 +1060,7 @@ async function loadNtms() {
         id: `club-${item.name.replace(/\s+/g, '-')}`,
 
         lat: Number(item.lat),
-        lng: Number(item.long),
+        lng: Number(item.lng),
 
         name: item.name,
 
@@ -1065,6 +1070,10 @@ async function loadNtms() {
         type: "Yacht Club",
 
         shore: item.note || "",
+
+        chips: [
+          ...(Array.isArray(item.chips) ? item.chips : []),
+        ].filter(Boolean),
 
         facts: item.facts
           ? item.facts.split("\n").map(line => {
@@ -1118,7 +1127,7 @@ async function loadNtms() {
 
         name: item.name,
 
-        kind: "port",
+        kind: item.kind,
         layer: "port",
 
         shore: item.desc || "",
@@ -1135,7 +1144,10 @@ async function loadNtms() {
 
         body: `<p>${item.body}</p>`,
 
-        chips: []
+        chips: [
+          ...(Array.isArray(item.chips) ? item.chips : []),
+        ].filter(Boolean)
+
       });
 
     });
