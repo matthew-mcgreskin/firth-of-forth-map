@@ -808,13 +808,18 @@ const sepaSignage = L.layerGroup().on("add", () => {
 // Historic scotland map
 const hesListedBuildings = L.layerGroup();
 
-const hesWfsBaseUrl =
+const hesRestQueryUrl =
   "https://" +
-  "inspire.hes.scot/arcgis/services/HES/HES_Designations/MapServer/WFSServer" +
-  "?service=WFS&version=2.0.0&request=GetFeature" +
-  "&typeName=HES_Designations:Listed_Buildings_by_Category" +
-  "&outputFormat=GEOJSON&srsName=EPSG:4326" +
-  "&bbox=55.90,-3.95,56.25,-2.60,EPSG:4326";
+  "inspire.hes.scot/arcgis/rest/services/HES/HES_Designations/MapServer/0/query" +
+  "?where=1%3D1" +
+  "&geometry=-3.95,55.90,-2.60,56.25" +
+  "&geometryType=esriGeometryEnvelope" +
+  "&inSR=4326" +
+  "&spatialRel=esriSpatialRelIntersects" +
+  "&outFields=ENT_TITLE,CATEGORY,DES_REF" +
+  "&outSR=4326" +
+  "&resultRecordCount=5000" +
+  "&f=geojson";
 
 const categoryColors = {
   A: "#e63946", // Red   - Category A
@@ -822,14 +827,10 @@ const categoryColors = {
   C: "#2a9d8f"  // Teal  - Category C
 };
 
-const pageSize = 1000;
-
-function loadHesPage(startIndex = 0) {
-  const pagedUrl = `${hesWfsBaseUrl}&count=${pageSize}&startIndex=${startIndex}`;
-
-  fetch(pagedUrl)
+function loadHesBatch(offset = 0) {
+  fetch(`${hesRestQueryUrl}&resultOffset=${offset}`)
     .then((response) => {
-      if (!response.ok) throw new Error("HES WFS request failed");
+      if (!response.ok) throw new Error("HES REST query failed");
       return response.json();
     })
     .then((geojsonData) => {
@@ -861,16 +862,16 @@ function loadHesPage(startIndex = 0) {
         }
       }).addTo(hesListedBuildings);
 
-      // If this batch hit the 1,000 limit, automatically fetch the next batch
-      if (features.length === pageSize) {
-        loadHesPage(startIndex + pageSize);
+      // ArcGIS REST sets exceededTransferLimit or returns 5,000 when more records exist
+      if (geojsonData.exceededTransferLimit || features.length === 5000) {
+        loadHesBatch(offset + features.length);
       }
     })
     .catch((error) => console.error("Error loading HES Listed Buildings:", error));
 }
 
-// Start fetching from record 0
-loadHesPage(0);
+loadHesBatch(0);
+
 
 
 
