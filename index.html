@@ -808,18 +808,12 @@ const sepaSignage = L.layerGroup().on("add", () => {
 // Historic scotland map
 const hesListedBuildings = L.layerGroup();
 
-const hesRestQueryUrl =
+const hesWfsBase =
   "https://" +
-  "inspire.hes.scot/arcgis/rest/services/HES/HES_Designations/MapServer/0/query" +
-  "?where=1%3D1" +
-  "&geometry=-3.95,55.90,-2.60,56.25" +
-  "&geometryType=esriGeometryEnvelope" +
-  "&inSR=4326" +
-  "&spatialRel=esriSpatialRelIntersects" +
-  "&outFields=ENT_TITLE,CATEGORY,DES_REF" +
-  "&outSR=4326" +
-  "&resultRecordCount=5000" +
-  "&f=geojson";
+  "inspire.hes.scot/arcgis/services/HES/HES_Designations/MapServer/WFSServer" +
+  "?service=WFS&version=2.0.0&request=GetFeature" +
+  "&typeName=HES_Designations:Listed_Buildings_by_Category" +
+  "&outputFormat=GEOJSON&srsName=EPSG:4326";
 
 const categoryColors = {
   A: "#e63946", // Red   - Category A
@@ -827,15 +821,25 @@ const categoryColors = {
   C: "#2a9d8f"  // Teal  - Category C
 };
 
-function loadHesBatch(offset = 0) {
-  fetch(`${hesRestQueryUrl}&resultOffset=${offset}`)
+// Split the Firth of Forth into 8 tiles so no single request hits the 2,000-record limit
+const forthBoxes = [
+  "55.90,-3.95,56.03,-3.30", // Falkirk, Bo'ness, Linlithgow, South Queensferry
+  "56.03,-3.95,56.25,-3.30", // Alloa, Kincardine, Culross, Dunfermline, North Queensferry
+  "55.90,-3.30,55.95,-3.21", // South-West Edinburgh
+  "55.95,-3.30,56.00,-3.21", // North-West Edinburgh, Cramond, Granton
+  "55.90,-3.21,55.95,-3.10", // South-East Edinburgh, Old Town, Southside
+  "55.95,-3.21,56.00,-3.10", // New Town, Leith, Portobello
+  "56.00,-3.30,56.25,-3.10", // Inverkeithing, Burntisland, Kinghorn, Kirkcaldy
+  "55.90,-3.10,56.25,-2.60"  // East Lothian & East Neuk of Fife
+];
+
+forthBoxes.forEach((bbox) => {
+  fetch(`${hesWfsBase}&bbox=${bbox},EPSG:4326`)
     .then((response) => {
-      if (!response.ok) throw new Error("HES REST query failed");
+      if (!response.ok) throw new Error(`HES WFS failed for ${bbox}`);
       return response.json();
     })
     .then((geojsonData) => {
-      const features = geojsonData.features || [];
-
       L.geoJSON(geojsonData, {
         pointToLayer: (feature, latlng) => {
           const category = feature.properties.CATEGORY;
@@ -861,16 +865,10 @@ function loadHesBatch(offset = 0) {
           );
         }
       }).addTo(hesListedBuildings);
-
-      // ArcGIS REST sets exceededTransferLimit or returns 5,000 when more records exist
-      if (geojsonData.exceededTransferLimit || features.length === 5000) {
-        loadHesBatch(offset + features.length);
-      }
     })
-    .catch((error) => console.error("Error loading HES Listed Buildings:", error));
-}
+    .catch((error) => console.error("Error loading HES tile:", error));
+});
 
-loadHesBatch(0);
 
 
 
