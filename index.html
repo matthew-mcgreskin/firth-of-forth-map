@@ -806,16 +806,59 @@ const sepaSignage = L.layerGroup().on("add", () => {
 
 
 
-const hesListedBuildings = L.tileLayer.wms(
-  "https://inspire.hes.scot/arcgis/services/HES/Listed_Buildings/MapServer/WMSServer",
-  {
-    layers: "0",
-    format: "image/png",
-    transparent: true,
-    version: "1.3.0",
-    attribution: "© Historic Environment Scotland"
-  }
-);
+// 1. Create an empty LayerGroup (this plugs directly into your existing overlaysTree)
+const hesListedBuildings = L.layerGroup();
+
+// 2. Define the WFS URL filtered to the Firth of Forth bounding box (Grangemouth to North Berwick)
+const hesWfsUrl =
+  "https://" +
+  "inspire.hes.scot/arcgis/services/HES/HES_Designations/MapServer/WFSServer" +
+  "?service=WFS&version=2.0.0&request=GetFeature" +
+  "&typeName=HES_Designations:Listed_Buildings_by_Category" +
+  "&outputFormat=GEOJSON&srsName=EPSG:4326" +
+  "&bbox=55.90,-3.85,56.25,-2.60,EPSG:4326";
+
+// 3. Fetch the features and style each dot by Category (A, B, or C)
+fetch(hesWfsUrl)
+  .then((response) => {
+    if (!response.ok) throw new Error("HES WFS request failed");
+    return response.json();
+  })
+  .then((geojsonData) => {
+    const categoryColors = {
+      A: "#e63946", // Red   - Category A (National/International importance)
+      B: "#f4a261", // Amber - Category B (Regional importance)
+      C: "#2a9d8f"  // Teal  - Category C (Local importance)
+    };
+
+    L.geoJSON(geojsonData, {
+      pointToLayer: (feature, latlng) => {
+        const category = feature.properties.CATEGORY;
+        return L.circleMarker(latlng, {
+          radius: 5,
+          fillColor: categoryColors[category] || "#6c757d",
+          color: "#ffffff",
+          weight: 1,
+          opacity: 1,
+          fillOpacity: 0.9
+        });
+      },
+      onEachFeature: (feature, layer) => {
+        const props = feature.properties;
+        const title = props.ENT_TITLE || "Listed Building";
+        const cat = props.CATEGORY || "Unknown";
+        const ref = props.DES_REF || "";
+
+        layer.bindPopup(
+          `<strong>${title}</strong><br>` +
+          `Category: <strong>${cat}</strong><br>` +
+          (ref ? `HES Ref: ${ref}` : "")
+        );
+      }
+    }).addTo(hesListedBuildings);
+  })
+  .catch((error) => console.error("Error loading HES Listed Buildings:", error));
+
 
 seaMarks.addTo(map);
 
