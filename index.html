@@ -806,34 +806,35 @@ const sepaSignage = L.layerGroup().on("add", () => {
 
 
 // Historic scotland map
-const hesListedBuildings = L.layerGroup();
+// 1. Create two separate LayerGroups instead of a single hesListedBuildings group
+const hesWestLayer = L.layerGroup().addTo(map);
+const hesEastLayer = L.layerGroup().addTo(map);
 
-const hesWfsBase =
-  "https://" +
-  "inspire.hes.scot/arcgis/services/HES/HES_Designations/MapServer/WFSServer" +
-  "?service=WFS&version=2.0.0&request=GetFeature" +
-  "&typeName=HES_Designations:Listed_Buildings_by_Category" +
-  "&outputFormat=GEOJSON&srsName=EPSG:4326";
+// 2. Define the Forth Road Bridge dividing line
+const BRIDGE_LNG = -3.404;
 
-const categoryColors = {
-  A: "#e63946", // Red   - Category A
-  B: "#f4a261", // Amber - Category B
-  C: "#2a9d8f"  // Teal  - Category C
-};
-
-// Split the Firth of Forth into 8 tiles so no single request hits the 2,000-record limit
+// 3. Split the boxes so they meet cleanly at -3.404
 const forthBoxes = [
-  "55.90,-3.95,56.03,-3.30", // Falkirk, Bo'ness, Linlithgow, South Queensferry
-  "56.03,-3.95,56.25,-3.30", // Alloa, Kincardine, Culross, Dunfermline, North Queensferry
-  "55.90,-3.30,55.95,-3.21", // South-West Edinburgh
-  "55.95,-3.30,56.00,-3.21", // North-West Edinburgh, Cramond, Granton
-  "55.90,-3.21,55.95,-3.10", // South-East Edinburgh, Old Town, Southside
-  "55.95,-3.21,56.00,-3.10", // New Town, Leith, Portobello
-  "56.00,-3.30,56.25,-3.10", // Inverkeithing, Burntisland, Kinghorn, Kirkcaldy
-  "55.90,-3.10,56.25,-2.60"  // East Lothian & East Neuk of Fife
+  // WEST OF BRIDGE (<= -3.404)
+  "55.90,-3.95,56.03,-3.404", // Falkirk, Bo'ness, Linlithgow, Blackness
+  "56.03,-3.95,56.25,-3.404", // Alloa, Kincardine, Culross, Dunfermline West
+
+  // EAST OF BRIDGE (>= -3.404)
+  "55.90,-3.404,56.03,-3.30", // South Queensferry, Dalmeny, Kirkliston
+  "56.03,-3.404,56.25,-3.30", // North Queensferry, Rosyth, Dunfermline East
+  "55.90,-3.30,55.95,-3.21",  // South-West Edinburgh
+  "55.95,-3.30,56.00,-3.21",  // North-West Edinburgh, Cramond, Granton
+  "55.90,-3.21,55.95,-3.10",  // South-East Edinburgh, Old Town, Southside
+  "55.95,-3.21,56.00,-3.10",  // New Town, Leith, Portobello
+  "56.00,-3.30,56.25,-3.10",  // Inverkeithing, Burntisland, Kinghorn, Kirkcaldy
+  "55.90,-3.10,56.25,-2.60"   // East Lothian & East Neuk of Fife
 ];
 
 forthBoxes.forEach((bbox) => {
+  // Check the west-most longitude of the bbox to decide which layer group it belongs to
+  const minLng = parseFloat(bbox.split(",")[1]);
+  const targetLayer = minLng < BRIDGE_LNG ? hesWestLayer : hesEastLayer;
+
   fetch(`${hesWfsBase}&bbox=${bbox},EPSG:4326`)
     .then((response) => {
       if (!response.ok) throw new Error(`HES WFS failed for ${bbox}`);
@@ -864,7 +865,7 @@ forthBoxes.forEach((bbox) => {
             (ref ? `HES Ref: ${ref}` : "")
           );
         }
-      }).addTo(hesListedBuildings);
+      }).addTo(targetLayer); // Adds to either hesWestLayer or hesEastLayer
     })
     .catch((error) => console.error("Error loading HES tile:", error));
 });
@@ -926,12 +927,13 @@ const overlaysTree = {
             ]
         }, // <-- Make sure this comma is here!
         {
-            label: "<strong>Historic Environment Scotland</strong>",
-            selectAllCheckbox: true,
-            children: [
-                { label: "Listed Buildings", layer: hesListedBuildings }
-            ]
-        }
+    label: "<strong>Historic Environment Scotland</strong>",
+    selectAllCheckbox: true,
+    children: [
+        { label: "Listed Buildings (West of Bridge)", layer: hesWestLayer },
+        { label: "Listed Buildings (East of Bridge)", layer: hesEastLayer }
+    ]
+}
     ]
 };
 
