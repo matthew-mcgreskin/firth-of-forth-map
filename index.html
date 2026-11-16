@@ -805,15 +805,21 @@ const sepaSignage = L.layerGroup().on("add", () => {
 );
 
 
-// Historic scotland map
-// 1. Create two separate LayerGroups instead of a single hesListedBuildings group
+// Historic Environment Scotland (HES) Listed Buildings
+const hesWfsBase =
+  "https://historicenvironment.scot";
+
+const categoryColors = {
+  A: "#e63946", // Red for Category A
+  B: "#f4a261", // Orange for Category B
+  C: "#457b9d"  // Blue for Category C
+};
+
 const hesWestLayer = L.layerGroup().addTo(map);
 const hesEastLayer = L.layerGroup().addTo(map);
 
-// 2. Define the Forth Road Bridge dividing line
 const BRIDGE_LNG = -3.404;
 
-// 3. Split the boxes so they meet cleanly at -3.404
 const forthBoxes = [
   // WEST OF BRIDGE (<= -3.404)
   "55.90,-3.95,56.03,-3.404", // Falkirk, Bo'ness, Linlithgow, Blackness
@@ -831,7 +837,6 @@ const forthBoxes = [
 ];
 
 forthBoxes.forEach((bbox) => {
-  // Check the west-most longitude of the bbox to decide which layer group it belongs to
   const minLng = parseFloat(bbox.split(",")[1]);
   const targetLayer = minLng < BRIDGE_LNG ? hesWestLayer : hesEastLayer;
 
@@ -865,10 +870,11 @@ forthBoxes.forEach((bbox) => {
             (ref ? `HES Ref: ${ref}` : "")
           );
         }
-      }).addTo(targetLayer); // Adds to either hesWestLayer or hesEastLayer
+      }).addTo(targetLayer);
     })
     .catch((error) => console.error("Error loading HES tile:", error));
 });
+
 
 
 
