@@ -1423,11 +1423,12 @@ document.getElementById("reset").addEventListener("click", () => {
         }
     });
 
-    [
+      [
       mpa, spa, sac, ramsar, sssi,
       mca, gcr, lnr, nnr,
       sepaPoints, sepaPolygons,
-      sepaZones, sepaSignage
+      sepaZones, sepaSignage,
+      hesWestLayer, hesEastLayer
     ].forEach(layer => {
         if (map.hasLayer(layer)) {
             map.removeLayer(layer);
