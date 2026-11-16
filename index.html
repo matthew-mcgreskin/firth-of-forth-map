@@ -807,7 +807,11 @@ const sepaSignage = L.layerGroup().on("add", () => {
 
 // Historic Environment Scotland (HES) Listed Buildings
 const hesWfsBase =
-  "https://historicenvironment.scot";
+  "https://" +
+  "inspire.hes.scot/arcgis/services/HES/HES_Designations/MapServer/WFSServer" +
+  "?service=WFS&version=2.0.0&request=GetFeature" +
+  "&typeName=HES_Designations:Listed_Buildings_by_Category" +
+  "&outputFormat=GEOJSON&srsName=EPSG:4326";
 
 const categoryColors = {
   A: "#e63946", // Red for Category A
